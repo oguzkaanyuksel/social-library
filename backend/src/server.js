@@ -22,7 +22,9 @@ const listRoutes = require('./routes/lists');
 const ratingRoutes = require('./routes/ratings');
 const reviewRoutes = require('./routes/reviews');
 const activityRoutes = require('./routes/activities');
-const adminRoutes = require('./routes/admin'); // Yeni eklenen
+const adminRoutes = require('./routes/admin');
+const feedRoutes = require('./routes/feed');
+const userRoutes = require('./routes/users');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/content', contentRoutes);
@@ -31,7 +33,9 @@ app.use('/api/lists', listRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/activities', activityRoutes);
-app.use('/api/admin', adminRoutes); // Yeni eklenen
+app.use('/api/admin', adminRoutes);
+app.use('/api/feed', feedRoutes);
+app.use('/api/users', userRoutes);
 
 sequelize.sync({ force: false })
   .then(() => {

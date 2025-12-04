@@ -34,10 +34,12 @@ export default function Discover() {
       const res = await axios.get("http://localhost:4000/api/content/genres", {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log("📚 Yüklenen genre'ler:", res.data);
       setAllGenres(res.data);
       setFilteredGenres(res.data); // Başlangıçta hepsini göster
     } catch (err) {
       console.error("Genre yüklenemedi:", err);
+      console.error("Hata detayı:", err.response?.data);
     } finally {
       setLoadingGenres(false);
     }
@@ -54,9 +56,11 @@ export default function Discover() {
     axios.get(`http://localhost:4000/api/content/genres?type=${filters.type}`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
+      console.log(`📚 ${filters.type} için filtrelenmiş genre'ler:`, res.data);
       setFilteredGenres(res.data);
     }).catch(err => {
       console.error("Genre filtreleme hatası:", err);
+      console.error("Hata detayı:", err.response?.data);
     });
   }
 
@@ -114,8 +118,8 @@ export default function Discover() {
               <option value="">
                 {loadingGenres ? "Yükleniyor..." : "Tümü"}
               </option>
-              {filteredGenres.map((g) => (
-                <option key={g} value={g}>{g}</option>
+              {filteredGenres.map((g, index) => (
+                <option key={`${g}-${index}`} value={g}>{g}</option>
               ))}
             </select>
           </div>
