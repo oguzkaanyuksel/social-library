@@ -42,7 +42,7 @@ router.get('/top-rated', authMiddleware, async (req, res) => {
     
     // Tüm içerikleri al
     const contents = await Content.findAll({
-      limit: 100
+      limit: 200
     });
     
     // Her içerik için ortalama rating hesapla
@@ -53,7 +53,7 @@ router.get('/top-rated', authMiddleware, async (req, res) => {
         });
         
         const average_rating = ratings.length > 0
-          ? ratings.reduce((sum, r) => sum + (r.rating || r.score || r.value || 0), 0) / ratings.length
+          ? ratings.reduce((sum, r) => sum + (r.value || 0), 0) / ratings.length
           : 0;
         
         return {
@@ -64,12 +64,13 @@ router.get('/top-rated', authMiddleware, async (req, res) => {
       })
     );
     
-    // 7 ve üzeri olanları filtrele ve sırala
+    // Rating'i olan içerikleri filtrele ve sırala (eşik kaldırıldı)
     const topRated = contentsWithRating
-      .filter(c => c.average_rating >= 7)
+      .filter(c => c.rating_count > 0) // En az 1 rating olmalı
       .sort((a, b) => b.average_rating - a.average_rating)
-      .slice(0, 20);
+      .slice(0, 50); // İlk 50 içerik
     
+    console.log(`✅ Top Rated: ${topRated.length} içerik bulundu`);
     res.json(topRated);
   } catch (err) {
     console.error(err);
@@ -111,59 +112,114 @@ router.get('/popular', authMiddleware, async (req, res) => {
 router.get('/discover', authMiddleware, async (req, res) => {
   try {
     const { type, genre, year, minRating } = req.query;
+    
+    // 1. VERİTABANINDAN MEVCUT İÇERİKLERİ ÇEK
     const where = {};
-
     if (type) where.type = type;
     if (year) where.year = year;
 
-    // Genre filtrelemesi için metadata içinde arama
-    let contents = await Content.findAll({
+    let dbContents = await Content.findAll({
       where,
-      order: [['createdAt', 'DESC']],
-      limit: 200 // Daha fazla veri çekiyoruz filtrelemek için
+      order: [['createdAt', 'DESC']]
     });
 
     // Genre filtresi varsa metadata içinde ara
     if (genre) {
-      contents = contents.filter(content => {
+      dbContents = dbContents.filter(content => {
         const metadata = content.metadata || {};
+        const genres = metadata.genres || [];
         
-        // Film için genres kontrolü
-        if (content.type === 'movie') {
-          const genres = metadata.genres || [];
-          return genres.some(g => {
-            if (typeof g === 'object' && g.name) {
-              return g.name.toLowerCase().includes(genre.toLowerCase());
-            }
-            return g.toLowerCase().includes(genre.toLowerCase());
-          });
-        }
-        
-        // Kitap için categories VE genres kontrolü
-        if (content.type === 'book') {
-          const categories = metadata.categories || [];
-          const genres = metadata.genres || [];
-          
-          return categories.some(cat => cat.toLowerCase().includes(genre.toLowerCase())) ||
-                 genres.some(g => g.toLowerCase().includes(genre.toLowerCase()));
-        }
-        
-        return false;
+        // Tam eşleşme kontrolü (case-insensitive)
+        return genres.some(g => {
+          const genreName = typeof g === 'object' && g.name ? g.name : g;
+          return genreName.toLowerCase() === genre.toLowerCase();
+        });
       });
     }
 
-    // MinRating filtresi varsa rating hesapla
+    // 2. API'DEN YENİ İÇERİKLERİ ÇEK (GENRE VARSA)
+    let apiContents = [];
+    
+    if (genre && type) {
+      try {
+        const { searchMovies } = require('../services/tmdbService');
+        const { searchBooks } = require('../services/googleBooksService');
+        
+        if (type === 'movie') {
+          // TMDB'de genre ile arama yap
+          console.log(`🔍 TMDB'de "${genre}" arıyor...`);
+          const movieResults = await searchMovies(genre, 1);
+          
+          // Sayfa 2 ve 3'ü de çek
+          const page2 = await searchMovies(genre, 2);
+          const page3 = await searchMovies(genre, 3);
+          
+          apiContents = [...movieResults, ...page2, ...page3];
+          
+        } else if (type === 'book') {
+          // Google Books'da kategori ile arama yap
+          console.log(`🔍 Google Books'da "${genre}" arıyor...`);
+          const bookResults = await searchBooks(`subject:${genre}`, 0);
+          
+          // Daha fazla sonuç için startIndex artır
+          const batch2 = await searchBooks(`subject:${genre}`, 20);
+          const batch3 = await searchBooks(`subject:${genre}`, 40);
+          
+          apiContents = [...bookResults, ...batch2, ...batch3];
+        }
+        
+        // API'den gelen içerikleri veritabanına kaydet (duplicate önleme)
+        for (const apiContent of apiContents) {
+          const [savedContent, created] = await Content.findOrCreate({
+            where: {
+              external_id: apiContent.external_id,
+              source: apiContent.source
+            },
+            defaults: apiContent
+          });
+          
+          if (created) {
+            console.log(`➕ Yeni içerik kaydedildi: ${savedContent.title}`);
+          }
+        }
+        
+      } catch (apiErr) {
+        console.error('API arama hatası:', apiErr.message);
+        // API hatası olsa bile DB sonuçlarını göster
+      }
+    }
+
+    // 3. DB'DEKİ TÜM SONUÇLARI BİRLEŞTİR (API'den yeni eklenenler de dahil)
+    let allContents = await Content.findAll({
+      where,
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Genre filtresi tekrar uygula
+    if (genre) {
+      allContents = allContents.filter(content => {
+        const metadata = content.metadata || {};
+        const genres = metadata.genres || [];
+        
+        return genres.some(g => {
+          const genreName = typeof g === 'object' && g.name ? g.name : g;
+          return genreName.toLowerCase() === genre.toLowerCase();
+        });
+      });
+    }
+
+    // 4. MinRating filtresi varsa rating hesapla
     if (minRating) {
       const { Rating } = require("../models");
       
       const contentsWithRating = await Promise.all(
-        contents.map(async (content) => {
+        allContents.map(async (content) => {
           const ratings = await Rating.findAll({
             where: { content_id: content.id }
           });
           
           const average_rating = ratings.length > 0
-            ? ratings.reduce((sum, r) => sum + (r.rating || r.score || r.value || 0), 0) / ratings.length
+            ? ratings.reduce((sum, r) => sum + (r.value || 0), 0) / ratings.length
             : 0;
           
           return {
@@ -173,17 +229,18 @@ router.get('/discover', authMiddleware, async (req, res) => {
         })
       );
       
-      // Min rating filtresi uygula
-      contents = contentsWithRating
+      // Min rating filtresi uygula ve sırala
+      allContents = contentsWithRating
         .filter(c => c.average_rating >= parseFloat(minRating))
-        .sort((a, b) => b.average_rating - a.average_rating)
-        .slice(0, 50);
+        .sort((a, b) => b.average_rating - a.average_rating);
     } else {
-      // Rating filtresi yoksa sadece 50 tane al
-      contents = contents.slice(0, 50).map(c => c.toJSON());
+      // Rating hesaplamadan JSON'a çevir
+      allContents = allContents.map(c => c.toJSON());
     }
 
-    res.json(contents);
+    console.log(`✅ Toplam ${allContents.length} sonuç bulundu`);
+    res.json(allContents);
+    
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Hata oluştu', error: err.message });

@@ -5,6 +5,7 @@ const cors = require("cors");
 require("dotenv").config();
 const sequelize = require("./config/db");
 require("./models/index"); // Tüm modelleri yükle
+const genreSyncService = require('./services/genreSync');
 
 const app = express();
 app.use(cors());
@@ -38,8 +39,17 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/users', userRoutes);
 
 sequelize.sync({ force: false })
-  .then(() => {
+  .then(async () => {
     console.log("✅ Veritabanı senkronize edildi.");
+    
+    // Genre başlatma - FİLMLER HER ZAMAN AKTİF
+    console.log("🔄 Film genre senkronizasyonu başlatılıyor...");
+    try {
+      await genreSyncService.initializeGenres();
+    } catch (err) {
+      console.error("⚠️ Genre başlatma başarısız:", err.message);
+    }
+    
     app.listen(4000, () => console.log("🚀 Server 4000 portunda çalışıyor."));
   })
   .catch(err => console.error("❌ Veritabanı hatası:", err));

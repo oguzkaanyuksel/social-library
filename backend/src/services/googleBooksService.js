@@ -23,20 +23,29 @@ async function searchBooks(query, startIndex = 0) {
 
     return response.items.map((item) => {
       const volumeInfo = item.volumeInfo;
+      
+      // Categories ve subjects'i birleştir
+      const categories = volumeInfo.categories || [];
+      const subjects = item.volumeInfo.subjects || [];
+      const allGenres = [...new Set([...categories, ...subjects])]; // Duplicate'leri kaldır
+      
       return {
         external_id: item.id,
         source: "googlebooks",
         type: "book",
         title: volumeInfo.title || "Başlık bilinmiyor",
-        overview: volumeInfo.description || "Açıklama bulunamadı.",
+        overview: volumeInfo.description || volumeInfo.subtitle || "Açıklama bulunamadı.",
         year: volumeInfo.publishedDate?.slice(0, 4) || "N/A",
-        poster_url: volumeInfo.imageLinks?.thumbnail || "https://placehold.co/500x750?text=Gorsel+Yok",
+        poster_url: volumeInfo.imageLinks?.thumbnail || 
+                    volumeInfo.imageLinks?.smallThumbnail || 
+                    "https://placehold.co/500x750?text=Gorsel+Yok",
         metadata: {
           authors: volumeInfo.authors || [],
           publisher: volumeInfo.publisher || "",
           pageCount: volumeInfo.pageCount || 0,
-          categories: volumeInfo.categories || [],
-          genres: volumeInfo.categories || [] // Aynı veriyi genres olarak da kaydet
+          categories: allGenres,
+          genres: allGenres, // Aynı veriyi genres olarak da kaydet
+          subtitle: volumeInfo.subtitle || ""
         }
       };
     });
@@ -61,13 +70,18 @@ async function getBookDetails(volumeId) {
     );
 
     const volumeInfo = response.volumeInfo;
+    
+    // Categories ve subjects'i birleştir
+    const categories = volumeInfo.categories || [];
+    const subjects = volumeInfo.subjects || [];
+    const allGenres = [...new Set([...categories, ...subjects])]; // Duplicate'leri kaldır
 
     return {
       external_id: volumeId,
       source: "googlebooks",
       type: "book",
       title: volumeInfo.title || "Başlık bilinmiyor",
-      overview: volumeInfo.description || "Açıklama bulunamadı.",
+      overview: volumeInfo.description || volumeInfo.subtitle || "Açıklama bulunamadı.",
       year: volumeInfo.publishedDate?.slice(0, 4) || "N/A",
       poster_url: volumeInfo.imageLinks?.thumbnail || 
                   volumeInfo.imageLinks?.smallThumbnail ||
@@ -79,10 +93,11 @@ async function getBookDetails(volumeId) {
         pageCount: volumeInfo.pageCount || 0,
         language: volumeInfo.language || "",
         isbn: volumeInfo.industryIdentifiers || [],
-        categories: volumeInfo.categories || [],
-        genres: volumeInfo.categories || [], // Aynı veriyi genres olarak da kaydet
+        categories: allGenres,
+        genres: allGenres, // Aynı veriyi genres olarak da kaydet
         averageRating: volumeInfo.averageRating || null,
-        ratingsCount: volumeInfo.ratingsCount || 0
+        ratingsCount: volumeInfo.ratingsCount || 0,
+        subtitle: volumeInfo.subtitle || ""
       }
     };
   } catch (error) {

@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "migrate": "node src/scripts/runMigrations.js"
+    "migrate": "node src/scripts/runMigrations.js",
+    "seed:books": "node src/seeds/bookSeed.js",
+    "cleanup:books": "node -e \"require('./src/seeds/bookSeed').cleanupSeedBooks()\""
   },
   "dependencies": {
     "axios": "^1.4.0",
