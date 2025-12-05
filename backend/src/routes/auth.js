@@ -144,8 +144,116 @@ router.post('/login', async (req,res)=>{
 });
 
 // Forgot Password
-router.post('/forgot-password', async (req,res)=>{
-  res.json({ message: 'Sıfırlama henüz aktif değil' });
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "E-posta adresi gerekli" });
+    }
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({ message: "Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı" });
+    }
+
+    // Rastgele token oluştur
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    // Token'ı hash'le ve veritabanına kaydet
+    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 saat geçerli
+    await user.save();
+
+    // Reset linki
+    const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
+
+    // E-posta gönderme (nodemailer konfigürasyonu gerekli)
+    // Eğer .env'de email ayarları yoksa konsola yazdır
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
+      console.log('\n=== ŞİFRE SIFIRLAMA LİNKİ ===');
+      console.log(`Kullanıcı: ${user.email}`);
+      console.log(`Link: ${resetUrl}`);
+      console.log('=============================\n');
+      
+      return res.json({ 
+        message: "Şifre sıfırlama linki konsola yazdırıldı (email yapılandırması eksik)",
+        resetUrl // Geliştirme amaçlı
+      });
+    }
+
+    // E-posta gönderme
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS
+      }
+    });
+
+    const mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: user.email,
+      subject: 'Şifre Sıfırlama Talebi',
+      html: `
+        <h2>Şifre Sıfırlama</h2>
+        <p>Şifrenizi sıfırlamak için aşağıdaki linke tıklayın:</p>
+        <a href="${resetUrl}">${resetUrl}</a>
+        <p>Bu link 1 saat geçerlidir.</p>
+        <p>Eğer bu talebi siz yapmadıysanız, bu e-postayı görmezden gelin.</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.json({ message: "Şifre sıfırlama linki e-posta adresinize gönderildi" });
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
+    res.status(500).json({ message: "Şifre sıfırlama isteği başarısız" });
+  }
+});
+
+// Reset Password
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password, confirmPassword } = req.body;
+
+    if (!password || !confirmPassword) {
+      return res.status(400).json({ message: "Şifre alanları gerekli" });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Şifreler eşleşmiyor" });
+    }
+
+    // Token'ı hash'le
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Token'a sahip ve süresi dolmamış kullanıcıyı bul
+    const user = await User.findOne({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { [require('sequelize').Op.gt]: Date.now() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Geçersiz veya süresi dolmuş token" });
+    }
+
+    // Yeni şifreyi hash'le ve kaydet
+    user.password = await bcrypt.hash(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ message: "Şifreniz başarıyla sıfırlandı. Giriş yapabilirsiniz." });
+  } catch (err) {
+    console.error("Reset Password Error:", err);
+    res.status(500).json({ message: "Şifre sıfırlama başarısız" });
+  }
 });
 
 module.exports = router;

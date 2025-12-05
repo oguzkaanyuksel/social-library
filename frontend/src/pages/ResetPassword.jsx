@@ -5,7 +5,7 @@ import axios from "axios";
 export default function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ password: "", passwordConfirm: "" });
+  const [form, setForm] = useState({ password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -19,36 +19,68 @@ export default function ResetPassword() {
     try {
       const res = await axios.post(`http://localhost:4000/api/auth/reset-password/${token}`, form);
       setSuccess(res.data.message);
-      setTimeout(() => navigate("/login"), 2000); // 2 saniye sonra login sayfasına yönlendir
+      setTimeout(() => navigate("/"), 2000); // 2 saniye sonra login sayfasına yönlendir
     } catch (err) {
       setError(err?.response?.data?.message || "Şifre değiştirilemedi");
     }
   };
 
   return (
-    <div style={{ maxWidth: 300, margin: "50px auto" }}>
-      <h2>Yeni Şifre Belirle</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="password"
-          name="password"
-          placeholder="Yeni Şifre"
-          value={form.password}
-          onChange={handleChange}
-        />
-        <br />
-        <input
-          type="password"
-          name="passwordConfirm"
-          placeholder="Şifreyi Tekrar"
-          value={form.passwordConfirm}
-          onChange={handleChange}
-        />
-        <br />
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        {success && <p style={{ color: "green" }}>{success}</p>}
-        <button type="submit">Şifreyi Güncelle</button>
-      </form>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h2>Yeni Şifre Belirle</h2>
+          <p>Hesabınız için yeni bir şifre oluşturun</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-input-group">
+            <label>Yeni Şifre</label>
+            <input
+              className="auth-input"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="auth-input-group">
+            <label>Şifreyi Tekrar</label>
+            <input
+              className="auth-input"
+              type="password"
+              name="confirmPassword"
+              placeholder="••••••••"
+              value={form.confirmPassword}
+              onChange={handleChange}
+            />
+          </div>
+
+          {error && <div className="auth-error">{error}</div>}
+          {success && <div style={{ 
+            backgroundColor: '#f0fdf4', 
+            color: '#16a34a', 
+            padding: '12px', 
+            borderRadius: '8px', 
+            fontSize: '0.9rem', 
+            textAlign: 'center', 
+            border: '1px solid #bbf7d0' 
+          }}>{success}</div>}
+
+          <button type="submit" className="auth-btn">Şifreyi Güncelle</button>
+        </form>
+
+        <div className="auth-footer">
+          <button 
+            onClick={() => navigate("/")} 
+            className="auth-link"
+          >
+            Giriş Sayfasına Dön
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

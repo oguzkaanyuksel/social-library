@@ -463,9 +463,9 @@ export default function ContentDetail() {
           </button>
 
           {showListMenu && (
-            <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-2 z-20 py-2">
+            <div className="custom-list-menu">
               {customLists.length === 0 ? (
-                <div className="px-4 py-2 text-sm text-gray-500">
+                <div className="custom-list-empty">
                   Hiç özel listeniz yok.
                 </div>
               ) : (
@@ -473,7 +473,7 @@ export default function ContentDetail() {
                   <button
                     key={list.id}
                     onClick={() => handleAddToCustomList(list.id)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 block"
+                    className="custom-list-item"
                   >
                     {list.name}
                   </button>

@@ -81,9 +81,33 @@ router.get('/top-rated', authMiddleware, async (req, res) => {
 // GET /api/content/popular
 router.get('/popular', authMiddleware, async (req, res) => {
   try {
-    const { Review } = require("../models");
+    const { category = 'reviews' } = req.query; // 'reviews' veya 'lists'
+    const { Review, ListItem } = require("../models");
     
-    // Her içerik için review sayısını hesapla
+    if (category === 'lists') {
+      // En çok listelenen içerikler
+      const contents = await Content.findAll({
+        attributes: {
+          include: [
+            [
+              require('sequelize').literal(`(
+                SELECT COUNT(*)
+                FROM list_items
+                WHERE list_items.content_id = Content.id
+              )`),
+              'list_count'
+            ]
+          ]
+        },
+        having: require('sequelize').literal('list_count > 0'), // 0 olanları gösterme
+        order: [[require('sequelize').literal('list_count'), 'DESC']],
+        limit: 50
+      });
+      
+      return res.json(contents);
+    }
+    
+    // En çok yorumlanan içerikler (default)
     const contents = await Content.findAll({
       attributes: {
         include: [
@@ -97,8 +121,9 @@ router.get('/popular', authMiddleware, async (req, res) => {
           ]
         ]
       },
+      having: require('sequelize').literal('review_count > 0'), // 0 olanları gösterme
       order: [[require('sequelize').literal('review_count'), 'DESC']],
-      limit: 20
+      limit: 50
     });
     
     res.json(contents);
@@ -208,6 +233,16 @@ router.get('/discover', authMiddleware, async (req, res) => {
       });
     }
 
+    // DUPLICATE KONTROLÜ: Aynı external_id ve source'a sahip içerikleri temizle
+    const uniqueMap = new Map();
+    allContents.forEach(item => {
+      const key = `${item.source}-${item.external_id}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, item);
+      }
+    });
+    allContents = Array.from(uniqueMap.values());
+
     // 4. MinRating filtresi varsa rating hesapla
     if (minRating) {
       const { Rating } = require("../models");
@@ -224,7 +259,8 @@ router.get('/discover', authMiddleware, async (req, res) => {
           
           return {
             ...content.toJSON(),
-            average_rating
+            average_rating,
+            rating_count: ratings.length
           };
         })
       );
@@ -234,8 +270,28 @@ router.get('/discover', authMiddleware, async (req, res) => {
         .filter(c => c.average_rating >= parseFloat(minRating))
         .sort((a, b) => b.average_rating - a.average_rating);
     } else {
-      // Rating hesaplamadan JSON'a çevir
-      allContents = allContents.map(c => c.toJSON());
+      // Rating hesapla ama filtre uygulama
+      const { Rating } = require("../models");
+      
+      const contentsWithRating = await Promise.all(
+        allContents.map(async (content) => {
+          const ratings = await Rating.findAll({
+            where: { content_id: content.id }
+          });
+          
+          const average_rating = ratings.length > 0
+            ? ratings.reduce((sum, r) => sum + (r.value || 0), 0) / ratings.length
+            : 0;
+          
+          return {
+            ...content.toJSON(),
+            average_rating,
+            rating_count: ratings.length
+          };
+        })
+      );
+      
+      allContents = contentsWithRating;
     }
 
     console.log(`✅ Toplam ${allContents.length} sonuç bulundu`);

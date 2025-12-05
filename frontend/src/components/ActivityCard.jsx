@@ -16,8 +16,17 @@ export default function ActivityCard({ activity, currentUser }) {
   const [newComment, setNewComment] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
   const [showCommentInput, setShowCommentInput] = useState(false);
+  const [showFullReview, setShowFullReview] = useState(false);
 
   const COMMENTS_LIMIT = 3;
+  const REVIEW_CHAR_LIMIT = 150;
+
+  // Review metnini en uzun halinden oku
+  const reviewText = payload?.reviewText || payload?.text || payload?.excerpt || "";
+  const isLongReview = reviewText.length > REVIEW_CHAR_LIMIT;
+  const displayedReview = isLongReview && !showFullReview
+    ? `${reviewText.slice(0, REVIEW_CHAR_LIMIT)}...`
+    : reviewText;
 
   // Avatar URL Helper
   const getAvatarUrl = (path) => {
@@ -38,6 +47,8 @@ export default function ActivityCard({ activity, currentUser }) {
     if (Comments) {
         setComments(Comments);
     }
+    // Her yeni aktivite için review state'ini sıfırla
+    setShowFullReview(false);
   }, [activity, currentUser]);
 
   const timeAgo = formatDistanceToNow(new Date(created_at), { addSuffix: true, locale: tr });
@@ -139,7 +150,21 @@ export default function ActivityCard({ activity, currentUser }) {
             <div className="preview-info">
               <h4 className="content-title">{payload.title || payload.contentTitle}</h4>
               {type === 'rating' && <div className="rating-display"><div className="stars">{"★".repeat(Math.round(payload.rating / 2))}<span className="stars-empty">{"★".repeat(5 - Math.round(payload.rating / 2))}</span></div><span className="rating-number">{payload.rating}/10</span></div>}
-              {type === 'review' && <div className="review-display"><p className="review-excerpt">"{payload.excerpt}"</p></div>}
+              {type === 'review' && (
+                <div className="review-display">
+                  <p className="review-excerpt" style={{wordBreak: 'break-word', overflowWrap: 'break-word', marginBottom: '4px'}}>
+                    "{displayedReview}"
+                  </p>
+                  {isLongReview && (
+                    <button 
+                      className="read-more-btn"
+                      onClick={(e) => {e.stopPropagation(); setShowFullReview(!showFullReview);}}
+                    >
+                      {showFullReview ? 'Daha az göster' : 'Daha fazla göster'}
+                    </button>
+                  )}
+                </div>
+              )}
               {type === 'list_add' && <div className="list-display"><span className="material-icons list-icon">playlist_add_check</span><span>"{payload.listName}" listesine eklendi.</span></div>}
             </div>
           </div>
@@ -202,7 +227,7 @@ export default function ActivityCard({ activity, currentUser }) {
                           <div className="comment-avatar-tiny" style={{width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', marginRight: '8px', flexShrink: 0}}>
                              {commentUserAvatar ? <img src={commentUserAvatar} style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <div style={{background:'#eee', width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px'}}>{(c.User?.username || "U")[0]}</div>}
                           </div>
-                          <div>
+                          <div style={{flex: 1, minWidth: 0, overflowWrap: 'break-word'}}>
                             <span 
                                 className="inline-comment-user" 
                                 onClick={(e)=>{e.stopPropagation(); navigate(`/profile/${c.User?.id}`)}}

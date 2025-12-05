@@ -32,7 +32,9 @@ router.post('/', auth, async (req, res) => {
         contentType: content.type,       // Önemli
         title: content.title,
         poster: content.poster_url,
-        excerpt: text.substring(0, 100) + (text.length > 100 ? "..." : "")
+        // Tam metni sakla ki frontend gerçek uzunluğu görsün
+        reviewText: text,
+        excerpt: text.substring(0, 120) + (text.length > 120 ? "..." : "")
       }
     });
 

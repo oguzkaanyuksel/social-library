@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 
 import Feed from "./pages/Feed";
@@ -17,90 +17,128 @@ import Search from "./components/Search";
 export default function App() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const shouldHideNavbar = 
     pathname === "/" ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/reset-password");
 
+  const handleNavigation = (path) => {
+    navigate(path);
+    setMobileMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/");
+    setMobileMenuOpen(false);
+  };
+
   return (
     <div>
       {!shouldHideNavbar && (
-        <nav className="w-full bg-white border-b px-6 py-2 flex items-center justify-between sticky top-0 z-50 shadow-sm gap-4 flex-nowrap">
-          {/* -------- Left: Logo -------- */}
-          <div 
-            className="flex items-center gap-2 cursor-pointer flex-shrink-0"
-            onClick={() => navigate("/feed")}
-          >
-            <div className="bg-blue-600 text-white w-9 h-9 rounded-md flex items-center justify-center text-lg font-bold">
-              SL
+        <nav className="navbar">
+          <div className="navbar-container">
+            {/* -------- Left: Logo -------- */}
+            <div 
+              className="nav-logo"
+              onClick={() => handleNavigation("/feed")}
+            >
+              <div className="logo-icon">
+                SL
+              </div>
+              <span className="logo-text">Social Library</span>
             </div>
-            <span className="text-xl font-semibold text-gray-800 whitespace-nowrap">Social Library</span>
-          </div>
 
-          {/* -------- Middle: Search Bar -------- */}
-          <div className="flex-1 min-w-0 max-w-md">
-            <Search />
-          </div>
+            {/* -------- Middle: Search Bar -------- */}
+            <div className="nav-search">
+              <Search />
+            </div>
 
-          {/* -------- Right: Menu Buttons -------- */}
-          <div className="flex items-center gap-6 flex-shrink-0">
-            <button
-              onClick={() => navigate("/feed")}
-              className="flex flex-col items-center text-gray-600 hover:text-blue-600 transition"
+            {/* -------- Right: Desktop Menu -------- */}
+            <div className="nav-actions desktop-menu">
+              <button onClick={() => handleNavigation("/feed")} className="nav-btn">
+                <span className="material-icons">home</span>
+                <span className="nav-label">Feed</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/top-rated")} className="nav-btn">
+                <span className="material-icons">star</span>
+                <span className="nav-label">En İyiler</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/popular")} className="nav-btn">
+                <span className="material-icons">trending_up</span>
+                <span className="nav-label">Popüler</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/discover")} className="nav-btn">
+                <span className="material-icons">explore</span>
+                <span className="nav-label">Keşfet</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/profile")} className="nav-btn">
+                <span className="material-icons">person</span>
+                <span className="nav-label">Profil</span>
+              </button>
+
+              <button onClick={handleLogout} className="nav-btn logout">
+                <span className="material-icons">logout</span>
+                <span className="nav-label">Çıkış</span>
+              </button>
+            </div>
+
+            {/* -------- Mobile Menu Toggle -------- */}
+            <button 
+              className="mobile-menu-toggle"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <span className="material-icons text-2xl">home</span>
-              <span className="text-xs whitespace-nowrap">Feed</span>
-            </button>
-
-            <button
-              onClick={() => navigate("/top-rated")}
-              className="flex flex-col items-center text-gray-600 hover:text-blue-600 transition"
-            >
-              <span className="material-icons text-2xl">star</span>
-              <span className="text-xs whitespace-nowrap">En İyiler</span>
-            </button>
-
-            <button
-              onClick={() => navigate("/popular")}
-              className="flex flex-col items-center text-gray-600 hover:text-blue-600 transition"
-            >
-              <span className="material-icons text-2xl">trending_up</span>
-              <span className="text-xs whitespace-nowrap">Popüler</span>
-            </button>
-
-            <button
-              onClick={() => navigate("/discover")}
-              className="flex flex-col items-center text-gray-600 hover:text-blue-600 transition"
-            >
-              <span className="material-icons text-2xl">explore</span>
-              <span className="text-xs whitespace-nowrap">Keşfet</span>
-            </button>
-
-            <button
-              onClick={() => navigate("/profile")}
-              className="flex flex-col items-center text-gray-600 hover:text-blue-600 transition"
-            >
-              <span className="material-icons text-2xl">person</span>
-              <span className="text-xs whitespace-nowrap">Profil</span>
-            </button>
-
-            <button
-              onClick={() => { 
-                localStorage.removeItem("token"); 
-                navigate("/");
-              }}
-              className="flex flex-col items-center text-red-500 hover:text-red-600 transition"
-            >
-              <span className="material-icons text-2xl">logout</span>
-              <span className="text-xs whitespace-nowrap">Çıkış</span>
+              <span className="material-icons">
+                {mobileMenuOpen ? "close" : "menu"}
+              </span>
             </button>
           </div>
+
+          {/* -------- Mobile Dropdown Menu -------- */}
+          {mobileMenuOpen && (
+            <div className="mobile-menu-dropdown">
+              <button onClick={() => handleNavigation("/feed")} className="mobile-nav-item">
+                <span className="material-icons">home</span>
+                <span>Feed</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/top-rated")} className="mobile-nav-item">
+                <span className="material-icons">star</span>
+                <span>En İyiler</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/popular")} className="mobile-nav-item">
+                <span className="material-icons">trending_up</span>
+                <span>Popüler</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/discover")} className="mobile-nav-item">
+                <span className="material-icons">explore</span>
+                <span>Keşfet</span>
+              </button>
+
+              <button onClick={() => handleNavigation("/profile")} className="mobile-nav-item">
+                <span className="material-icons">person</span>
+                <span>Profil</span>
+              </button>
+
+              <button onClick={handleLogout} className="mobile-nav-item logout">
+                <span className="material-icons">logout</span>
+                <span>Çıkış</span>
+              </button>
+            </div>
+          )}
         </nav>
       )}
 
       {/* İçerik Alanı */}
-      <div className={!shouldHideNavbar ? "pt-20 md:pt-24" : ""}>
+      <div className={!shouldHideNavbar ? "pt-4" : ""}>
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
