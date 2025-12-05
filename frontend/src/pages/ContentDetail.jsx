@@ -23,6 +23,10 @@ export default function ContentDetail() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [userRating, setUserRating] = useState(0);
   const [libraryStatus, setLibraryStatus] = useState("none");
+  
+  // Site içi rating verileri
+  const [averageRating, setAverageRating] = useState(0);
+  const [ratingCount, setRatingCount] = useState(0);
 
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
@@ -92,6 +96,30 @@ export default function ContentDetail() {
             );
             setLibraryStatus(statusRes.data.status);
           } catch (e) {}
+          
+          // Kullanıcının bu içeriğe verdiği puanı çek
+          try {
+            const userRatingRes = await axios.get(
+              `${API_BASE}/ratings/my-rating/${contentRes.data.id}`,
+              { headers }
+            );
+            if (userRatingRes.data.rating) {
+              setUserRating(userRatingRes.data.rating.value);
+            }
+          } catch (e) {
+            // Kullanıcı henüz puan vermemiş
+          }
+        }
+        
+        // İçeriğin ortalama rating'ini çek
+        try {
+          const avgRatingRes = await axios.get(
+            `${API_BASE}/ratings/average/${contentRes.data.id}`
+          );
+          setAverageRating(avgRatingRes.data.average || 0);
+          setRatingCount(avgRatingRes.data.count || 0);
+        } catch (e) {
+          // Rating yok
         }
       } catch (error) {
         console.error("Hata:", error);
@@ -129,6 +157,14 @@ export default function ContentDetail() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setUserRating(score);
+      
+      // Ortalama rating'i güncelle
+      const avgRatingRes = await axios.get(
+        `${API_BASE}/ratings/average/${dbContentId}`
+      );
+      setAverageRating(avgRatingRes.data.average || 0);
+      setRatingCount(avgRatingRes.data.count || 0);
+      
       alert(`${score} puan verildi!`);
     } catch (e) {
       alert("Hata: Puan verilemedi");
@@ -141,14 +177,15 @@ export default function ContentDetail() {
     if (!dbContentId) return;
 
     try {
-      await axios.post(
+      const res = await axios.post(
         `${API_BASE}/lists/manage`,
         { content_id: dbContentId, status_key: statusKey },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setLibraryStatus(statusKey.replace("_", ""));
-      alert("Kütüphane güncellendi.");
+      setLibraryStatus(res.data.status);
+      alert(res.data.message);
     } catch (e) {
+      console.error('Library action error:', e);
       alert("Hata: İşlem başarısız.");
     }
   };
@@ -271,9 +308,12 @@ export default function ContentDetail() {
 
   const creators = isMovie
     ? meta.director || "Bilinmiyor"
-    : Array.isArray(meta.authors)
+    : Array.isArray(meta.authors) && meta.authors.length > 0
     ? meta.authors.join(", ")
-    : meta.authors;
+    : meta.authors || "Yazar bilgisi bulunamadı";
+  
+  // Subtitle varsa göster
+  const subtitle = meta.subtitle || "";
 
   return (
     <div className="content-detail-page fade-in">
@@ -293,6 +333,9 @@ export default function ContentDetail() {
 
         <div className="detail-texts">
           <h1 className="detail-title">{content.title}</h1>
+          {subtitle && (
+            <p className="text-gray-600 italic mb-2">{subtitle}</p>
+          )}
 
           <div className="detail-subtitle">
             <span className="badge-type">{isMovie ? "FİLM" : "KİTAP"}</span>
@@ -302,20 +345,26 @@ export default function ContentDetail() {
           <div className="platform-rating">
             <div className="rating-score">
               <span className="rating-value">
-                {meta.vote_average
-                  ? Number(meta.vote_average).toFixed(1)
+                {averageRating > 0
+                  ? averageRating.toFixed(1)
                   : "N/A"}
               </span>
               <span className="rating-label">PUAN</span>
             </div>
             <div className="rating-visuals">
-              <div className="rating-count">{meta.vote_count || 0} oy</div>
+              <div className="rating-count">{ratingCount} oy</div>
             </div>
           </div>
 
           <div className="summary-section">
             <h3>ÖZET</h3>
-            <p className="summary-text">{content.overview}</p>
+            <p className="summary-text">
+              {content.overview && content.overview !== "Açıklama bulunamadı." 
+                ? content.overview 
+                : subtitle 
+                ? `${subtitle}` 
+                : "Bu kitap için detaylı açıklama bulunmamaktadır."}
+            </p>
           </div>
 
           <div className="meta-grid">
@@ -327,7 +376,9 @@ export default function ContentDetail() {
             {/* --- YENİ EKLENEN TÜR ALANI --- */}
             <div className="meta-item">
               <strong>TÜR</strong>
-              <span>{genresDisplay}</span>
+              <span className={genresDisplay === "Belirtilmemiş" ? "text-gray-400" : ""}>
+                {genresDisplay}
+              </span>
             </div>
             {/* ----------------------------- */}
 
@@ -376,6 +427,7 @@ export default function ContentDetail() {
                   : "default"
               }`}
             >
+              {["watched", "read"].includes(libraryStatus) ? "✓ " : ""}
               {isMovie ? "İzledim" : "Okudum"}
             </button>
 
@@ -391,6 +443,7 @@ export default function ContentDetail() {
                   : "default"
               }`}
             >
+              {["to_watch", "to_read", "towatch", "toread"].includes(libraryStatus) ? "✓ " : ""}
               {isMovie ? "İzlenecek" : "Okunacak"}
             </button>
           </div>
@@ -422,7 +475,7 @@ export default function ContentDetail() {
                     onClick={() => handleAddToCustomList(list.id)}
                     className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 block"
                   >
-                    {list.title}
+                    {list.name}
                   </button>
                 ))
               )}

@@ -26,6 +26,18 @@ export default function TopRated() {
   }
 
   if (loading) return <p className="text-center mt-10">Yükleniyor...</p>;
+  
+  if (!contents || contents.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-6">En Yüksek Puanlılar</h1>
+        <div className="text-center py-20">
+          <p className="text-gray-500 text-lg">Henüz puanlanmış içerik bulunmamaktadır.</p>
+          <p className="text-gray-400 text-sm mt-2">İçerikleri keşfet ve puan vererek bu listeyi oluşturmaya yardımcı ol!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6">

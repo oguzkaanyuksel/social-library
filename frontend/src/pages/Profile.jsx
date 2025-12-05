@@ -16,6 +16,7 @@ export default function Profile() {
   const [activities, setActivities] = useState([]);
   const [activeTab, setActiveTab] = useState("watched");
   const [isFollowing, setIsFollowing] = useState(false);
+  const [selectedCustomList, setSelectedCustomList] = useState(null);
 
   // --- DÜZENLEME STATE'LERİ ---
   const [isEditing, setIsEditing] = useState(false);
@@ -44,10 +45,10 @@ export default function Profile() {
       if(listsRes.data.lists) {
           listsRes.data.lists.forEach(list => {
               const items = list.ListItems ? list.ListItems.map(li => li.Content) : [];
-              if (list.title === 'İzlediklerim') grouped.watched = items;
-              else if (list.title === 'İzlenecekler') grouped.towatch = items;
-              else if (list.title === 'Okuduklarım') grouped.read = items;
-              else if (list.title === 'Okunacaklar') grouped.toread = items;
+              if (list.name === 'İzlediklerim') grouped.watched = items;
+              else if (list.name === 'İzlenecekler') grouped.towatch = items;
+              else if (list.name === 'Okuduklarım') grouped.read = items;
+              else if (list.name === 'Okunacaklar') grouped.toread = items;
               else grouped.custom.push(list); 
           });
       }
@@ -152,7 +153,7 @@ export default function Profile() {
           
           <div className="profile-details">
             <h1 className="profile-username">{profileUser.username}</h1>
-            <p className="profile-bio">{profileUser.bio || "Merhaba, ben bir kütüphane kurdunu!"}</p>
+            <p className="profile-bio">{profileUser.bio || "Merhaba ben social library kullanıyorum!"}</p>
             
             <div className="profile-stats">
               <div className="stat-item"><span className="stat-value">{profileUser.followersCount || 0}</span><span className="stat-label">Takipçi</span></div>
@@ -229,20 +230,33 @@ export default function Profile() {
             { k: 'read', l: 'Okuduklarım', i: 'menu_book' },
             { k: 'toread', l: 'Okunacaklar', i: 'bookmark_border' }
           ].map(tab => (
-            <button key={tab.k} onClick={()=>setActiveTab(tab.k)} className={`tab-btn ${activeTab===tab.k?'active':''}`}>
+            <button key={tab.k} onClick={()=>{ setActiveTab(tab.k); setSelectedCustomList(null); }} className={`tab-btn ${activeTab===tab.k && !selectedCustomList ?'active':''}`}>
               <span className="material-icons tab-icon">{tab.i}</span> {tab.l} <span className="tab-count">{lists[tab.k]?.length||0}</span>
+            </button>
+          ))}
+          
+          {/* Özel Listeler Tabları */}
+          {lists.custom.map(customList => (
+            <button 
+              key={customList.id} 
+              onClick={()=>{ setSelectedCustomList(customList); setActiveTab(null); }} 
+              className={`tab-btn ${selectedCustomList?.id === customList.id ? 'active' : ''}`}
+            >
+              <span className="material-icons tab-icon">playlist_play</span> 
+              {customList.name} 
+              <span className="tab-count">{customList.ListItems?.length || 0}</span>
             </button>
           ))}
         </div>
 
         <div className="content-grid mb-10">
-          {currentList.length === 0 ? (
+          {(selectedCustomList ? (selectedCustomList.ListItems?.map(li => li.Content) || []) : currentList).length === 0 ? (
             <div className="empty-state">
                 <span className="material-icons empty-icon">inbox</span>
                 <p>Bu listede henüz içerik yok.</p>
             </div>
           ) : (
-            currentList.map(c => (
+            (selectedCustomList ? (selectedCustomList.ListItems?.map(li => li.Content) || []) : currentList).map(c => (
               <div key={c.id} className="content-card" onClick={()=>navigate(`/content/${c.external_id}?source=${c.source}&type=${c.type}`)}>
                   <div className="poster-wrapper">
                       <img src={c.poster_url || "https://placehold.co/300x450"} className="poster-img" alt={c.title}/>
@@ -254,24 +268,9 @@ export default function Profile() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Özel Listeler */}
-            <div className="col-span-1">
-                <h3 className="font-bold text-lg mb-4 text-gray-800">Özel Listeler</h3>
-                {lists.custom.length === 0 ? <p className="text-gray-400 text-sm">Özel liste yok.</p> : (
-                    <ul className="space-y-2">
-                        {lists.custom.map(l => (
-                            <li key={l.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm font-medium text-gray-700 flex justify-between items-center">
-                                {l.title} 
-                                <span className="bg-gray-100 px-2 py-1 rounded-full text-xs text-gray-500 font-bold">{l.ListItems?.length || 0}</span>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
             {/* Son Aktiviteler */}
-            <div className="col-span-2">
+            <div className="col-span-1">
                 <h3 className="font-bold text-lg mb-4 text-gray-800">Son Aktiviteler</h3>
                 <div className="space-y-4">
                     {activities.length === 0 ? <p className="text-gray-400 text-sm">Henüz aktivite yok.</p> : (

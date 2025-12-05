@@ -15,7 +15,7 @@ router.get('/my-custom-lists', auth, async (req, res) => {
     try {
       const lists = await List.findAll({ where: { user_id: req.user.id } });
       const standardTitles = Object.values(STANDARD_LISTS);
-      const customLists = lists.filter(l => !standardTitles.includes(l.title));
+      const customLists = lists.filter(l => !standardTitles.includes(l.name));
       res.json({ lists: customLists });
     } catch (err) { res.status(500).json({ message: 'Server error' }); }
 });
@@ -24,7 +24,7 @@ router.post('/create', auth, async (req, res) => {
     const { title } = req.body;
     if (!title) return res.status(400).json({ message: "Başlık gerekli" });
     try {
-      const list = await List.create({ user_id: req.user.id, title, description: 'Özel Liste' });
+      const list = await List.create({ user_id: req.user.id, name: title, description: 'Özel Liste' });
       res.json({ list, message: "Liste oluşturuldu" });
     } catch (err) { res.status(500).json({ message: "Server error" }); }
 });
@@ -52,12 +52,12 @@ router.post('/add-item', auth, async (req, res) => {
         username: user.username,
         userAvatar: user.avatar,
         contentId: content.id,
-        externalId: content.external_id, // EK
-        source: content.source,          // EK
-        contentType: content.type,       // EK
+        externalId: content.external_id,
+        source: content.source,
+        contentType: content.type,
         title: content.title,
         poster: content.poster_url,
-        listName: list.title
+        listName: list.name
       }
     });
     res.json({ message: "Listeye eklendi" });
@@ -72,7 +72,7 @@ router.get('/my-status/:contentId', auth, async (req, res) => {
         });
         const statusMap = {};
         userLists.forEach(list => {
-            const key = Object.keys(STANDARD_LISTS).find(k => STANDARD_LISTS[k] === list.title);
+            const key = Object.keys(STANDARD_LISTS).find(k => STANDARD_LISTS[k] === list.name);
             if (key) statusMap[key] = true;
         });
         let status = 'none';
@@ -93,39 +93,59 @@ router.post('/manage', auth, async (req, res) => {
       if(!listTitle) return res.status(400).json({ message: "Geçersiz liste tipi" });
   
       const content = await Content.findByPk(content_id);
-      const [list] = await List.findOrCreate({ where: { user_id: req.user.id, title: listTitle } });
+      if (!content) return res.status(404).json({ message: "İçerik bulunamadı" });
+      
+      const [list] = await List.findOrCreate({ 
+        where: { user_id: req.user.id, name: listTitle },
+        defaults: { user_id: req.user.id, name: listTitle, description: 'Standart Liste' }
+      });
+      
+      // Mevcut durumu kontrol et
+      const existingItem = await ListItem.findOne({ where: { list_id: list.id, content_id } });
+      
+      // Toggle: Eğer zaten listedeyse çıkar, değilse ekle
+      if (existingItem) {
+        await existingItem.destroy();
+        return res.json({ message: "Listeden çıkarıldı", status: 'none' });
+      }
+      
+      // Diğer çakışan listelerden çıkar
       const isMovie = content.type === 'movie';
       const conflictKeys = isMovie ? ['watched', 'towatch'] : ['read', 'toread'];
       
       for (const key of conflictKeys) {
           if (STANDARD_LISTS[key] === listTitle) continue;
-          const otherList = await List.findOne({ where: { user_id: req.user.id, title: STANDARD_LISTS[key] } });
+          const otherList = await List.findOne({ where: { user_id: req.user.id, name: STANDARD_LISTS[key] } });
           if (otherList) await ListItem.destroy({ where: { list_id: otherList.id, content_id } });
       }
   
-      const [item, created] = await ListItem.findOrCreate({ where: { list_id: list.id, content_id } });
+      // Listeye ekle
+      await ListItem.create({ list_id: list.id, content_id });
       
-      if(created) {
-          const user = await User.findByPk(req.user.id);
-          await Activity.create({
-              user_id: req.user.id,
-              type: "list_add",
-              payload: {
-                  userId: user.id,
-                  username: user.username,
-                  userAvatar: user.avatar,
-                  contentId: content.id,
-                  externalId: content.external_id, // EK
-                  source: content.source,          // EK
-                  contentType: content.type,       // EK
-                  title: content.title,
-                  poster: content.poster_url,
-                  listName: listTitle
-              }
-          });
-      }
+      // Activity oluştur
+      const user = await User.findByPk(req.user.id);
+      await Activity.create({
+          user_id: req.user.id,
+          type: "list_add",
+          payload: {
+              userId: user.id,
+              username: user.username,
+              userAvatar: user.avatar,
+              contentId: content.id,
+              externalId: content.external_id,
+              source: content.source,
+              contentType: content.type,
+              title: content.title,
+              poster: content.poster_url,
+              listName: listTitle
+          }
+      });
+      
       res.json({ message: "Listeye eklendi", status: status_key });
-    } catch (err) { res.status(500).json({ message: "Server error" }); }
+    } catch (err) { 
+      console.error('List manage error:', err);
+      res.status(500).json({ message: "Server error", error: err.message }); 
+    }
   });
 
 router.get('/user/:userId', async (req, res) => {
@@ -135,7 +155,10 @@ router.get('/user/:userId', async (req, res) => {
             include: [{ model: ListItem, include: [{ model: Content }] }]
         });
         res.json({ lists });
-    } catch (err) { res.status(500).json({ message: "Server error" }); }
+    } catch (err) { 
+      console.error('Get user lists error:', err);
+      res.status(500).json({ message: "Server error" }); 
+    }
 });
 
 module.exports = router;
