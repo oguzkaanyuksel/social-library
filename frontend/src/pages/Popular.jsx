@@ -5,16 +5,18 @@ import { useNavigate } from "react-router-dom";
 export default function Popular() {
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState('reviews'); // 'reviews' veya 'lists'
   const navigate = useNavigate();
 
   useEffect(() => {
     loadPopular();
-  }, []);
+  }, [category]);
 
   async function loadPopular() {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:4000/api/content/popular", {
+      const res = await axios.get(`http://localhost:4000/api/content/popular?category=${category}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setContents(res.data);
@@ -28,26 +30,66 @@ export default function Popular() {
   if (loading) return <p className="text-center mt-10">Yükleniyor...</p>;
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">En Popüler İçerikler</h1>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>En Popüler İçerikler</h1>
+      </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      {/* Kategori Seçimi */}
+      <div className="category-tabs">
+        <button
+          onClick={() => setCategory('reviews')}
+          className={`category-tab ${category === 'reviews' ? 'active' : 'inactive'}`}
+        >
+          💬 En Çok Yorumlananlar
+        </button>
+        <button
+          onClick={() => setCategory('lists')}
+          className={`category-tab ${category === 'lists' ? 'active' : 'inactive'}`}
+        >
+          📚 En Çok Listelenenler
+        </button>
+      </div>
+      
+      {loading ? (
+        <div className="loading-spinner"></div>
+      ) : contents.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">📉</div>
+          <p className="text-gray-500 text-lg">Henüz {category === 'reviews' ? 'yorumlanmış' : 'listelenmiş'} içerik bulunmamaktadır.</p>
+        </div>
+      ) : (
+      <div className="content-grid">
         {contents.map((content) => (
           <div
             key={content.id}
-            className="cursor-pointer hover:scale-105 transition"
+            className="content-card"
             onClick={() => navigate(`/content/${content.external_id}?source=${content.source}`)}
           >
-            <img
-              src={content.poster_url || "/placeholder.png"}
-              alt={content.title}
-              className="w-full h-64 object-cover rounded-lg shadow-md"
-            />
-            <h3 className="mt-2 font-semibold text-sm">{content.title}</h3>
-            <p className="text-xs text-gray-600">💬 {content.review_count || 0} yorum</p>
+            <div className="poster-wrapper">
+              <img
+                src={content.poster_url || "/placeholder.png"}
+                alt={content.title}
+                className="poster-img"
+              />
+              <div className="card-badge">
+                {category === 'reviews' ? '💬' : '📚'}
+              </div>
+            </div>
+            <div className="card-info">
+              <h3 className="content-title">{content.title}</h3>
+              <p className="content-year">
+                {category === 'reviews' ? (
+                  <>{content.review_count || 0} yorum</>
+                ) : (
+                  <>{content.list_count || 0} listede</>
+                )}
+              </p>
+            </div>
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }

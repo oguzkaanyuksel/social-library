@@ -15,7 +15,13 @@ router.get('/', auth, async (req, res) => {
       attributes: ['followee_id']
     });
     
-    const ids = followees.map(f => f.followee_id).concat([req.user.id]);
+    // Sadece takip edilen kullanıcıların aktivitelerini göster
+    const ids = followees.map(f => f.followee_id);
+    
+    // Eğer kimseyi takip etmiyorsa boş array döndür
+    if (ids.length === 0) {
+      return res.json({ activities: [] });
+    }
 
     const where = { user_id: ids };
     if (cursor) where.id = { [Op.lt]: cursor };

@@ -29,9 +29,12 @@ export default function TopRated() {
   
   if (!contents || contents.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">En Yüksek Puanlılar</h1>
-        <div className="text-center py-20">
+      <div className="page-container">
+        <div className="page-header">
+          <h1>En Yüksek Puanlılar</h1>
+        </div>
+        <div className="empty-state">
+          <div className="empty-icon">⭐</div>
           <p className="text-gray-500 text-lg">Henüz puanlanmış içerik bulunmamaktadır.</p>
           <p className="text-gray-400 text-sm mt-2">İçerikleri keşfet ve puan vererek bu listeyi oluşturmaya yardımcı ol!</p>
         </div>
@@ -40,23 +43,32 @@ export default function TopRated() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">En Yüksek Puanlılar</h1>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>En Yüksek Puanlılar</h1>
+      </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="content-grid">
         {contents.map((content) => (
           <div
             key={content.id}
-            className="cursor-pointer hover:scale-105 transition"
+            className="content-card"
             onClick={() => navigate(`/content/${content.external_id}?source=${content.source}`)}
           >
-            <img
-              src={content.poster_url || "/placeholder.png"}
-              alt={content.title}
-              className="w-full h-64 object-cover rounded-lg shadow-md"
-            />
-            <h3 className="mt-2 font-semibold text-sm">{content.title}</h3>
-            <p className="text-xs text-gray-600">⭐ {content.average_rating?.toFixed(1) || "N/A"}</p>
+            <div className="poster-wrapper">
+              <img
+                src={content.poster_url || "/placeholder.png"}
+                alt={content.title}
+                className="poster-img"
+              />
+              <div className="card-badge">
+                ⭐ {content.average_rating?.toFixed(1) || "N/A"}
+              </div>
+            </div>
+            <div className="card-info">
+              <h3 className="content-title">{content.title}</h3>
+              <p className="content-year">{content.rating_count || 0} oy</p>
+            </div>
           </div>
         ))}
       </div>

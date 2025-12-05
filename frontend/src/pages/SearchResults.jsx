@@ -40,6 +40,14 @@ export default function SearchResults() {
   const q = queryParams.get("q");
   const type = queryParams.get("type"); // 'contents' veya 'users' (URL parametresinden gelir)
 
+  // Avatar URL helper
+  const getAvatarUrl = (path) => {
+    if (!path) return null;
+    return path.startsWith('/')
+      ? `http://localhost:4000${path}`
+      : `http://localhost:4000/uploads/${path}`;
+  };
+
   useEffect(() => {
     // Token kontrolü: Eğer giriş yapılmamışsa ana sayfaya at
     const token = localStorage.getItem("token");
@@ -118,24 +126,24 @@ export default function SearchResults() {
                 {/* --- KULLANICI KARTI --- */}
                 {type === 'users' ? (
                   <div className="flex flex-col items-center p-6 text-center h-full">
-                    <div className="user-avatar-wrapper mb-4">
+                    <div className="user-avatar-wrapper mb-4" style={{width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', border: '3px solid #e5e7eb'}}>
                        {item.avatar ? (
                         <img 
-                          src={item.avatar.startsWith('/') 
-                            ? `http://localhost:4000${item.avatar}` 
-                            : `http://localhost:4000/uploads/${item.avatar}`}
+                          src={getAvatarUrl(item.avatar)}
                           alt={item.username} 
-                          className="w-full h-full object-cover"
-                          onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
+                          style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                          onError={(e) => { 
+                            e.target.style.display='none'; 
+                            const placeholder = document.createElement('div');
+                            placeholder.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #e5e7eb; font-size: 2.5rem; color: #6b7280; font-weight: bold';
+                            placeholder.textContent = item.username[0].toUpperCase();
+                            e.target.parentNode.appendChild(placeholder);
+                          }}
                         />
-                       ) : null}
-                       <div className="fallback-avatar hidden">
-                          <span className="material-icons text-5xl text-gray-400">person</span>
-                       </div>
-                       {!item.avatar && (
-                         <div className="fallback-avatar flex">
-                            <span className="material-icons text-5xl text-gray-400">person</span>
-                         </div>
+                       ) : (
+                        <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e5e7eb', fontSize: '2.5rem', color: '#6b7280', fontWeight: 'bold'}}>
+                          {item.username[0].toUpperCase()}
+                        </div>
                        )}
                     </div>
                     <h3 className="font-bold text-lg text-gray-900 mb-1">{item.username}</h3>

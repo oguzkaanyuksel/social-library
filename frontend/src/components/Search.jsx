@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import API from "../services/api"; 
 import { useNavigate } from "react-router-dom";
 
@@ -7,8 +7,31 @@ export default function Search() {
   const [results, setResults] = useState({ contents: [], users: [] });
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef(null);
 
   const navigate = useNavigate();
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Avatar URL helper
+  const getAvatarUrl = (path) => {
+    if (!path) return null;
+    return path.startsWith('/')
+      ? `http://localhost:4000${path}`
+      : `http://localhost:4000/uploads/${path}`;
+  };
 
   const handleSearch = async (value) => {
     setQuery(value);
@@ -52,6 +75,13 @@ export default function Search() {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && query.trim()) {
+      navigate(`/search-results?q=${encodeURIComponent(query)}`);
+      setShowResults(false);
+    }
+  };
+
   const handleViewAll = (type) => {
     navigate(`/search-results?type=${type}&q=${encodeURIComponent(query)}`);
     setShowResults(false);
@@ -72,13 +102,15 @@ export default function Search() {
   };
 
   return (
-    <div className="search-container relative w-full max-w-md">
+    <div ref={searchRef} className="search-container relative w-full max-w-md">
       <input
         type="text"
         placeholder="Kitap, film veya kullanıcı ara..."
         value={query}
         onChange={(e) => handleSearch(e.target.value)}
         onFocus={() => { if(query) setShowResults(true); }}
+        onClick={() => { if(query) setShowResults(true); }}
+        onKeyDown={handleKeyDown}
         className="w-full bg-gray-100 border border-gray-300 px-4 py-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-shadow focus:shadow-md"
       />
 
@@ -121,24 +153,38 @@ export default function Search() {
                 <div
                   key={user.id}
                   className="search-user-item"
-                  onClick={() => goToProfile(user)} // User objesini gönderiyoruz
+                  onClick={() => goToProfile(user)}
                 >
-                  <div className="search-avatar bg-gray-200 flex items-center justify-center">
+                  <div className="search-avatar">
                     {user.avatar ? (
                       <img
-                        src={user.avatar.startsWith('/') 
-                          ? `http://localhost:4000${user.avatar}` 
-                          : `http://localhost:4000/uploads/${user.avatar}`}
+                        src={getAvatarUrl(user.avatar)}
                         alt={user.username}
-                        onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.style.backgroundColor = '#ccc'; }}
+                        style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%'}}
+                        onError={(e) => { 
+                          e.target.style.display = 'none'; 
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'avatar-placeholder-small';
+                          placeholder.textContent = user.username[0].toUpperCase();
+                          placeholder.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #e5e7eb; color: #6b7280; font-weight: bold; border-radius: 50%';
+                          e.target.parentNode.appendChild(placeholder);
+                        }}
                       />
                     ) : (
-                      <span className="material-icons text-xl text-gray-400">person</span>
+                      <div className="avatar-placeholder-small" style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e5e7eb', color: '#6b7280', fontWeight: 'bold', borderRadius: '50%'}}>
+                        {user.username[0].toUpperCase()}
+                      </div>
                     )}
                   </div>
                   <p className="font-semibold text-sm truncate">{user.username}</p>
                 </div>
               ))}
+              
+              {results.users.length > 3 && (
+                <div className="search-show-more" onClick={() => handleViewAll('users')}>
+                  Tüm kullanıcıları gör ({results.users.length}+)
+                </div>
+              )}
             </div>
           )}
         </div>

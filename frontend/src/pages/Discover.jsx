@@ -86,16 +86,18 @@ export default function Discover() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">İçerik Keşfet</h1>
+    <div className="page-container">
+      <div className="page-header">
+        <h1>İçerik Keşfet</h1>
+      </div>
 
       {/* Filtreler */}
-      <div className="card mb-6 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-semibold mb-1">Tür</label>
+      <div className="filter-card">
+        <div className="filter-grid">
+          <div className="filter-group">
+            <label>Tür</label>
             <select
-              className="w-full border rounded px-3 py-2"
+              className="filter-select"
               value={filters.type}
               onChange={(e) => {
                 setFilters({ ...filters, type: e.target.value, genre: "" });
@@ -107,10 +109,10 @@ export default function Discover() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-1">Kategori</label>
+          <div className="filter-group">
+            <label>Kategori</label>
             <select
-              className="w-full border rounded px-3 py-2"
+              className="filter-select"
               value={filters.genre}
               onChange={(e) => setFilters({ ...filters, genre: e.target.value })}
               disabled={loadingGenres}
@@ -124,25 +126,25 @@ export default function Discover() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-1">Yıl</label>
+          <div className="filter-group">
+            <label>Yıl</label>
             <input
               type="number"
-              className="w-full border rounded px-3 py-2"
+              className="filter-input"
               placeholder="Örn: 2020"
               value={filters.year}
               onChange={(e) => setFilters({ ...filters, year: e.target.value })}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold mb-1">Min. Puan</label>
+          <div className="filter-group">
+            <label>Min. Puan</label>
             <input
               type="number"
               step="0.1"
               min="0"
               max="10"
-              className="w-full border rounded px-3 py-2"
+              className="filter-input"
               placeholder="Örn: 7.5"
               value={filters.minRating}
               onChange={(e) => setFilters({ ...filters, minRating: e.target.value })}
@@ -152,7 +154,7 @@ export default function Discover() {
 
         <button
           onClick={handleSearch}
-          className="btn mt-4"
+          className="filter-btn"
         >
           Ara
         </button>
@@ -160,22 +162,31 @@ export default function Discover() {
 
       {/* Sonuçlar */}
       {loading ? (
-        <p className="text-center">Yükleniyor...</p>
+        <div className="loading-spinner"></div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="content-grid">
           {contents.map((content) => (
             <div
               key={content.id}
-              className="cursor-pointer hover:scale-105 transition"
+              className="content-card"
               onClick={() => navigate(`/content/${content.external_id}?source=${content.source}`)}
             >
-              <img
-                src={content.poster_url || "/placeholder.png"}
-                alt={content.title}
-                className="w-full h-64 object-cover rounded-lg shadow-md"
-              />
-              <h3 className="mt-2 font-semibold text-sm">{content.title}</h3>
-              <p className="text-xs text-gray-600">⭐ {content.average_rating?.toFixed(1) || "N/A"}</p>
+              <div className="poster-wrapper">
+                <img
+                  src={content.poster_url || "/placeholder.png"}
+                  alt={content.title}
+                  className="poster-img"
+                />
+                <div className="card-badge">
+                  {content.average_rating ? `⭐ ${content.average_rating.toFixed(1)}` : '-'}
+                </div>
+              </div>
+              <div className="card-info">
+                <h3 className="content-title">{content.title}</h3>
+                <p className="content-year">
+                  {content.rating_count ? `${content.rating_count} oy` : "Henüz puanlanmamış"}
+                </p>
+              </div>
             </div>
           ))}
         </div>

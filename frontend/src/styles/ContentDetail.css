@@ -465,6 +465,9 @@
   line-height: 1.6;
   color: #475569;
   white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .comment-actions {
@@ -514,4 +517,68 @@
 @keyframes rotation {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* --- ÖZEL LİSTE AÇILIR MENÜSÜ --- */
+.custom-list-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  margin-top: 10px;
+  z-index: 50;
+  overflow: hidden; /* Köşelerin yuvarlak kalması için */
+  animation: menuFadeIn 0.2s ease-out;
+}
+
+/* Menü Öğeleri (Liste İsimleri) */
+.custom-list-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #f8fafc;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #475569; /* Slate-600 */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.custom-list-item:last-child {
+  border-bottom: none;
+}
+
+.custom-list-item:hover {
+  background-color: #f3e8ff; /* Butonla uyumlu açık mor */
+  color: #7e22ce; /* Koyu mor yazı */
+  padding-left: 20px; /* Hover'da hafif sağa kayma efekti */
+}
+
+/* Liste Boş İse */
+.custom-list-empty {
+  padding: 16px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Menü Açılış Animasyonu */
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -31,39 +31,73 @@ export default function Register() {
   };
 
   return (
-    <div style={{ maxWidth: 300, margin: "50px auto" }}>
-      <h2>Kayıt Ol</h2>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h2>Kayıt Ol</h2>
+          <p>Yeni bir hesap oluşturun</p>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <input name="username" placeholder="Kullanıcı Adı" onChange={handleChange} />
-        <br />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-input-group">
+            <label>Kullanıcı Adı</label>
+            <input
+              className="auth-input"
+              name="username"
+              placeholder="kullaniciadi"
+              onChange={handleChange}
+            />
+          </div>
 
-        <input name="email" placeholder="E-posta" onChange={handleChange} />
-        <br />
+          <div className="auth-input-group">
+            <label>E-posta</label>
+            <input
+              className="auth-input"
+              name="email"
+              placeholder="ornek@email.com"
+              onChange={handleChange}
+            />
+          </div>
 
-        <input type="password" name="password" placeholder="Şifre" onChange={handleChange} />
-        <br />
+          <div className="auth-input-group">
+            <label>Şifre</label>
+            <input
+              className="auth-input"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              onChange={handleChange}
+            />
+          </div>
 
-        <input
-          type="password"
-          name="confirmPassword"
-          placeholder="Şifre Tekrar"
-          onChange={handleChange}
-        />
-        <br />
+          <div className="auth-input-group">
+            <label>Şifre Tekrar</label>
+            <input
+              className="auth-input"
+              type="password"
+              name="confirmPassword"
+              placeholder="••••••••"
+              onChange={handleChange}
+            />
+          </div>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
+          {error && <div className="auth-error">{error}</div>}
 
-        <button type="submit">Kayıt Ol</button>
-      </form>
+          <button type="submit" className="auth-btn">Kayıt Ol</button>
+        </form>
 
-      {/* Giriş yap butonu */}
-      <button
-        onClick={() => navigate("/")}
-        style={{ marginTop: "15px" }}
-      >
-        Giriş Yap
-      </button>
+        <div className="auth-footer">
+          <div>
+            Zaten hesabınız var mı?{" "}
+            <button
+              onClick={() => navigate("/")}
+              className="auth-link"
+            >
+              Giriş Yap
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

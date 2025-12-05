@@ -41,47 +41,61 @@ export default function Login() {
   };
 
   return (
-    <div style={{ maxWidth: 300, margin: "50px auto" }}>
-      <h2>Giriş Yap</h2>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h2>Giriş Yap</h2>
+          <p>Hesabınıza erişmek için giriş yapın</p>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          name="email"
-          placeholder="E-posta"
-          value={form.email}
-          onChange={handleChange}
-        />
-        <br />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-input-group">
+            <label>E-posta</label>
+            <input
+              className="auth-input"
+              name="email"
+              placeholder="ornek@email.com"
+              value={form.email}
+              onChange={handleChange}
+            />
+          </div>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Şifre"
-          value={form.password}
-          onChange={handleChange}
-        />
-        <br />
+          <div className="auth-input-group">
+            <label>Şifre</label>
+            <input
+              className="auth-input"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={handleChange}
+            />
+          </div>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
+          {error && <div className="auth-error">{error}</div>}
 
-        <button type="submit">Giriş Yap</button>
-      </form>
+          <button type="submit" className="auth-btn">Giriş Yap</button>
+        </form>
 
-      {/* Şifremi unuttum */}
-      <button 
-        onClick={handleForgotPassword}
-        style={{ marginTop: "10px", display: "block" }}
-      >
-        Şifremi Unuttum
-      </button>
+        <div className="auth-footer">
+          <button 
+            onClick={handleForgotPassword}
+            className="auth-link"
+          >
+            Şifremi Unuttum
+          </button>
 
-      {/* Kayıt Ol butonu */}
-      <button 
-        onClick={() => navigate("/register")} 
-        style={{ marginTop: "10px" }}
-      >
-        Kayıt Ol
-      </button>
+          <div>
+            Hesabınız yok mu?{" "}
+            <button 
+              onClick={() => navigate("/register")} 
+              className="auth-link"
+            >
+              Kayıt Ol
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
